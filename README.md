@@ -12,5 +12,3 @@
 
 机械臂在 RViz 的仿真界面：
 ![gauss_rviz](gauss6500/img/gauss_rviz.png)
-
-代码部分参考自： [Niryo One](https://niryo.com/ "Niryo One官网")
