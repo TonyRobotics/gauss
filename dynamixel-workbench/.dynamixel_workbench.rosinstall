@@ -1,0 +1,2 @@
+- git: {local-name: dynamixel_sdk, uri: 'https://github.com/ROBOTIS-GIT/DynamixelSDK.git', version: master}
+- git: {local-name: dynamixel_workbench_msgs, uri: 'https://github.com/ROBOTIS-GIT/dynamixel-workbench-msgs.git', version: master}

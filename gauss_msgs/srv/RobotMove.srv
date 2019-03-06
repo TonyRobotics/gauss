@@ -1,0 +1,5 @@
+gauss_msgs/RobotMoveCommand cmd
+---
+int32 status
+string message
+

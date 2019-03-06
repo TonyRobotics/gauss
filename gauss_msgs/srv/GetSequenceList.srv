@@ -1,0 +1,4 @@
+bool info_header_only
+---
+gauss_msgs/Sequence[] sequences
+

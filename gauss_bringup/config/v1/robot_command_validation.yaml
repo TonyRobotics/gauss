@@ -1,0 +1,55 @@
+#
+#
+# Validation for a RobotMoveCommand
+# (taken from urdf)
+#
+
+joint_limits:
+    j1:
+        min: -1.5708
+        max: 1.5708
+    j2:
+        min: -1.5708
+        max: 0.5236
+    j3:
+        min: -0.2967
+        max: 1.5710
+    j4:
+        min: -2.0944
+        max: 2.0944
+    j5:
+        min: -1.7453
+        max: 1.7453
+    j6:
+        min: -2.5310
+        max: 2.5310
+
+position_limits:
+    x:
+        min: 0.00
+        max: 0.461
+    y:
+        min: -0.461
+        max: 0.461
+    z:
+        min: 0.00
+        max: 0.711
+
+rpy_limits:
+    roll:
+        min: -3.14159
+        max: 3.14159
+    pitch:
+        min: -3.14159
+        max: 3.14159
+    yaw:
+        min: -3.14159
+        max: 3.14159
+
+tool_limits:
+    gripper_open_speed:
+        min: 0
+        max: 1023
+    gripper_close_speed:
+        min: 0
+        max: 1023

@@ -1,0 +1,10 @@
+int32 cmd_type
+
+string position_name
+gauss_msgs/Position position
+
+---
+int32 status
+string message
+
+gauss_msgs/Position position 

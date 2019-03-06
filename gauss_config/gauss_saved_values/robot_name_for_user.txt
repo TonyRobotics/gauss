@@ -1,0 +1,5 @@
+# THIS IS A GENERATED FILE
+# Here is the name the user gave to this robot
+# This name does not affect anything,
+# it is only useful for user to easily recognize the robot on desktop/mobile apps
+TP-LINK_6578

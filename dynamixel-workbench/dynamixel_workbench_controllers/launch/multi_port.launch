@@ -1,0 +1,25 @@
+<launch>
+  <arg name="pan_device_name"      default="/dev/ttyUSB0"/>
+  <arg name="pan_baud_rate"        default="57600"/>
+
+  <arg name="tilt_device_name"      default="/dev/ttyUSB1"/>
+  <arg name="tilt_baud_rate"        default="57600"/>
+
+  <arg name="scan_range"                 default="10"/>
+
+  <arg name="profile_velocity"           default="200"/>
+  <arg name="profile_acceleration"       default="50"/>
+
+  <param name="pan/device_name"      value="$(arg pan_device_name)"/>
+  <param name="pan/baud_rate"        value="$(arg pan_baud_rate)"/>
+
+  <param name="tilt/device_name"      value="$(arg tilt_device_name)"/>
+  <param name="tilt/baud_rate"        value="$(arg tilt_baud_rate)"/>
+
+  <param name="scan_range"               value="$(arg scan_range)"/>
+
+  <param name="profile_velocity"         value="$(arg profile_velocity)"/>
+  <param name="profile_acceleration"     value="$(arg profile_acceleration)"/>
+
+  <node name="multi_port_example" pkg="dynamixel_workbench_controllers" type="multi_port" required="true" output="screen"/>
+</launch>

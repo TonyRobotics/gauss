@@ -1,0 +1,133 @@
+<?xml version="1.0"?>
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="gauss">
+    <!-- properties -->
+    <xacro:property name="base_joint1_z_distance" value="0.070" />
+    <xacro:property name="joint1_joint2_z_distance" value="0.1805" />
+    <xacro:property name="joint2_joint3_y_distance" value="0.185" />
+    <xacro:property name="joint3_joint4_x_distance" value="0.149" />
+    <xacro:property name="joint4_joint5_z_distance" value="0.101" /> 
+    <xacro:property name="joint5_joint6_x_distance" value="0.026" /> 
+
+    <xacro:property name="PI" value="3.14159265359" />
+
+    <xacro:property name="joint1_lower_limit" value="${-PI/2}" />
+    <xacro:property name="joint1_upper_limit" value="${PI/2}" />
+    <xacro:property name="joint2_lower_limit" value="${-PI/2}" />
+    <xacro:property name="joint2_upper_limit" value="${PI/6}" />
+    <!--xacro:property name="joint3_lower_limit" value="-0.26179938" /-->
+    <xacro:property name="joint3_lower_limit" value="-0.29670579" />
+    <xacro:property name="joint3_upper_limit" value="${PI/2}" />
+    <xacro:property name="joint4_lower_limit" value="${-PI*2/3}" />
+    <xacro:property name="joint4_upper_limit" value="${PI*2/3}" />
+    <xacro:property name="joint5_lower_limit" value="-1.74532922" />
+    <xacro:property name="joint5_upper_limit" value="1.74532922" />
+    <xacro:property name="joint6_lower_limit" value="-2.53072737" />
+    <xacro:property name="joint6_upper_limit" value="2.53072737" />
+
+    <!-- links -->
+    <link name="ground_link" />
+
+    <link name="base_link">
+
+    </link>
+
+    <link name="link1">
+
+    </link>
+
+    <link name="link2">
+
+    </link>
+
+    <link name="link3">
+
+    </link>
+
+    <link name="link4">
+
+    </link>
+
+    <link name="link5">
+
+    </link>
+
+    <link name="link6">
+
+    </link>
+
+    <link name="flange">
+
+    </link>
+
+    <link name="tool0">
+
+    </link>
+
+    <!-- joints -->
+    <joint name="ground_joint" type="fixed">
+        <parent link="ground_link" />
+        <child link="base_link" />
+        <origin xyz="0 0 0" rpy="0 0 0" />
+    </joint>
+
+    <joint name="joint1" type="revolute">
+        <parent link="base_link" />
+        <child link="link1" />
+        <origin xyz="0 0 ${base_joint1_z_distance}" rpy="0 0 0" />
+        <axis xyz="0 0 1" />
+        <limit effort="1" velocity="1.0" lower="${joint1_lower_limit}" upper="${joint1_upper_limit}" />
+    </joint>
+
+    <joint name="joint2" type="revolute">
+        <parent link="link1" />
+        <child link="link2" />
+        <origin xyz="0 0 ${joint1_joint2_z_distance}" rpy="${PI/2} 0 0" />
+        <axis xyz="0 0 1" />
+        <limit effort="1" velocity="1.0" lower="${joint2_lower_limit}" upper="${joint2_upper_limit}" />
+    </joint>
+
+    <joint name="joint3" type="revolute">
+        <parent link="link2" />
+        <child link="link3" />
+        <origin xyz="0 ${joint2_joint3_y_distance} 0" rpy="0 0 0" />
+        <axis xyz="0 0 1" />
+        <limit effort="1" velocity="1.0" lower="${joint3_lower_limit}" upper="${joint3_upper_limit}" />
+    </joint>
+
+    <joint name="joint4" type="revolute">
+        <parent link="link3" />
+        <child link="link4" />
+        <origin xyz="${joint3_joint4_x_distance} 0 0" rpy="0 ${PI/2} 0" />
+        <axis xyz="0 0 1" />
+        <limit effort="1" velocity="1.0" lower="${joint4_lower_limit}" upper="${joint4_upper_limit}" />
+    </joint>
+
+    <joint name="joint5" type="revolute">
+        <parent link="link4" />
+        <child link="link5" />
+        <origin xyz="0 0 ${joint4_joint5_z_distance}" rpy="0 ${-PI/2} 0" />
+        <axis xyz="0 0 1" />
+        <limit effort="1" velocity="1.0" lower="${joint5_lower_limit}" upper="${joint5_upper_limit}" />
+    </joint>
+
+    <joint name="joint6" type="revolute">
+        <parent link="link5" />
+        <child link="link6" />
+        <origin xyz="${joint5_joint6_x_distance} 0 0" rpy="0 ${PI/2} 0" />
+        <axis xyz="0 0 1" />
+        <limit effort="1" velocity="1.0" lower="${joint6_lower_limit}" upper="${joint6_upper_limit}" />
+    </joint>
+
+    <joint name="joint_flange" type="fixed">
+        <parent link="link6" />
+        <child link="flange" />
+        <origin xyz="0 0 0" rpy="0 ${-PI/2} ${-PI/2}" />
+    </joint>
+
+    <joint name="joint_tool" type="fixed">
+        <parent link="flange" />
+        <child link="tool0" />
+        <origin xyz="0 0 0" rpy="0 0 0" />
+    </joint>
+</robot>

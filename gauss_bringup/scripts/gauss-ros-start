@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# log info "gauss-ros: Using workspace setup file ~/Project/gauss_ws/devel/setup.bash"
+source ~/Project/gauss_ws/devel/setup.bash
+
+#export ROS_HOSTNAME=$(hostname)
+
+#export ROS_MASTER_URI=http://127.0.1.1:11311
+
+roslaunch gauss_bringup rpi_setup.launch

@@ -1,0 +1,9 @@
+
+Description="bringup gauss-ros"
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/gauss-ros-start
+
+[Install]
+WantedBy=multi-user.target

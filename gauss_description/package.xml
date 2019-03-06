@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package>
+  <name>gauss_description</name>
+  <version>1.0.0</version>
+  <description>Provides URDF files for Moveit! and IKfast plugin</description>
+  <author>Jeremy Dong</author>
+  <maintainer email="jeremy.dong@tonyrobotics.com">Jeremy Dong</maintainer>
+  <license>GPLv3</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <export>
+  </export>
+</package>

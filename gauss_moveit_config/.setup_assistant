@@ -1,0 +1,11 @@
+moveit_setup_assistant_config:
+  URDF:
+    package: gauss_description
+    relative_path: urdf/gauss.urdf.xacro
+    xacro_args: --inorder
+  SRDF:
+    relative_path: config/gauss.srdf
+  CONFIG:
+    author_name: jeremy dong
+    author_email: jeremy.dong@tonyrobotics.com
+    generated_timestamp: 1536913959

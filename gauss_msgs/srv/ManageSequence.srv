@@ -1,0 +1,10 @@
+int32 cmd_type
+
+int32 sequence_id
+gauss_msgs/Sequence sequence
+
+---
+int32 status
+string message
+
+gauss_msgs/Sequence sequence

@@ -1,0 +1,8 @@
+# goal
+---
+# result
+std_msgs/Int8 ack_nak
+std_msgs/String status_message
+---
+# feedback
+std_msgs/String task_phase

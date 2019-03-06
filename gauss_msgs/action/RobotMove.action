@@ -1,0 +1,9 @@
+# goal
+gauss_msgs/RobotMoveCommand cmd
+---
+# result
+int32 status
+string message
+---
+# feedback
+gauss_msgs/RobotState state

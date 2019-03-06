@@ -1,0 +1,40 @@
+<?xml version="0.0"?>
+<launch>
+    
+    <arg name="execute_on_gauss_raspberry_pi_image" default="true" />
+  
+    <!-- Load the URDF, SRDF and other .yaml configuration files on the param server -->
+    <arg name="urdf_without_meshes" default="true" />
+    <include file="$(find gauss_bringup)/launch/gauss_base.launch" pass_all_args="true"/>
+
+    <!-- rosbridge websocket server -->
+    <node name="tf2_web_republisher" pkg="tf2_web_republisher" type="tf2_web_republisher"/>
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
+    <!-- Setup interface -->
+    <node name="gauss_rpi" pkg="gauss_rpi" type="gauss_rpi_node_simulator.py" output="screen">
+        
+        <param name="launch_ros_processes"  type="boolean" value="true" />
+        <param name="process_state_publish_rate" type="double" value="0.33" />
+        <param name="wifi_manager_enabled"  type="boolean" value="true" />
+        <param name="hotspot_ssid"          type="string"  value="gauss" /> <!-- MAC address will be added to make it unique -->
+        <param name="hotspot_password"      type="string"  value="tonyrobot" />
+        <param name="filename_robot_name"   type="string"  value="~/gauss_saved_values/robot_name_for_user.txt" />
+        <rosparam file="$(find gauss_bringup)/config/rpi_ros_processes_simulator.yaml" />
+        
+        <param name="publish_io_state_frequency" type="double" value="10.0" />
+        
+        <param name="modbus_server_enabled" type="boolean" value="true" />
+        <param name="modbus_server_address" type="string"  value="0.0.0.0" />
+        <param name="modbus_server_port"    type="int"     value="5020" />
+
+        <param name="ros_log_size_treshold" type="int"    value="1024" /> <!-- 1024 MB -->
+        <param name="should_purge_ros_log_on_startup_file" type="string" 
+            value="~/gauss_saved_values/purge_ros_log_at_startup.txt" />
+
+        <!-- don't change that unless you manually change ros log location --> 
+        <param name="ros_log_location"      type="string" value="~/.ros/log" /> 
+    </node>
+
+    <node name="gauss_udp_broadcast" pkg="gauss_rpi" type="udp_broadcast.py" output="screen">
+    </node>
+</launch>

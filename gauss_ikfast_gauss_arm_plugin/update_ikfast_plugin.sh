@@ -1,0 +1,1 @@
+rosrun moveit_kinematics create_ikfast_moveit_plugin.py gauss gauss_arm gauss_ikfast_gauss_arm_plugin /home/jeremy/Project/gauss_ws/src/gauss_ikfast_gauss_arm_plugin/src/gauss_gauss_arm_ikfast_solver.cpp
