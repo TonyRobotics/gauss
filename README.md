@@ -1,7 +1,7 @@
 
  Gauss6500 机械臂
 
-[汤尼机器人官网](http://www.tonyrobotics.com/ "汤尼机器人官网")  
+[机械臂主页](http://gauss.tonyrobotics.com/ "机械臂主页")  
 
 [淘宝网址](https://item.taobao.com/item.htm?spm=a230r.1.14.1.46962f47OKzNW6&id=586250996678&ns=1&abbucket=10#detail "淘宝网址")
 
