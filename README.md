@@ -7,6 +7,10 @@
 
 [商城网址](http://cn.robostore.me/goods-details/10780 "商城网址")
 
+[高斯开发文档](https://gauss-doc.readthedocs.io/en/latest/ "高斯开发文档")
+
+[知乎专栏](https://zhuanlan.zhihu.com/c_1086677718430425088 "知乎专栏")
+
 机械臂在 Gazebo 的仿真界面： 
 ![gauss_gazebo](gauss6500/img/gauss_gazebo.png)
 
