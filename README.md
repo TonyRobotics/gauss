@@ -7,7 +7,9 @@
 
 [商城网址](http://cn.robostore.me/goods-details/10780 "商城网址")
 
-[高斯开发文档](https://gauss-doc.readthedocs.io/en/latest/ "高斯开发文档")
+[机械臂开发文档](https://gauss-doc.readthedocs.io/en/latest/ "机械臂开发文档")
+
+[Python开发文档](https://www.kancloud.cn/itfanr/gauss_doc_1/971823 "Python开发文档")
 
 [知乎专栏](https://zhuanlan.zhihu.com/c_1086677718430425088 "知乎专栏")
 
