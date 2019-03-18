@@ -16,8 +16,8 @@
         <param name="launch_ros_processes"  type="boolean" value="true" />
         <param name="process_state_publish_rate" type="double" value="0.33" />
         <param name="wifi_manager_enabled"  type="boolean" value="true" />
-        <param name="hotspot_ssid"          type="string"  value="Gauss" /> <!-- MAC address will be added to make it unique -->
-        <param name="hotspot_password"      type="string"  value="gauss_6500" />
+        <param name="hotspot_ssid"          type="string"  value="gauss" /> <!-- MAC address will be added to make it unique -->
+        <param name="hotspot_password"      type="string"  value="tonyrobot" />
         <param name="filename_robot_name"   type="string"  value="~/gauss_saved_values/robot_name_for_user.txt" />
         <rosparam file="$(find gauss_bringup)/config/rpi_ros_processes.yaml" />
         

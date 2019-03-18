@@ -192,7 +192,8 @@ class GaussDriver {
     {
         ROS_INFO("Received trajectory GOAL");
         robot->setCommandToCurrentPosition();  // set current command to encoder position
-        cm->update(ros::Time::now(), ros::Duration(0.00), true); // reset controllers to allow a discontinuity in position command
+        cm->update(ros::Time::now(), ros::Duration(0.00), false); // reset controllers to allow a discontinuity in position command
+        // cm->update(ros::Time::now(), ros::Duration(0.00), true); // reset controllers to allow a discontinuity in position command
         comm->synchronizeMotors(true);
     }
 

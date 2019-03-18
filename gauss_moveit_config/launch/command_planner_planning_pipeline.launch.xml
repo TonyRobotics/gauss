@@ -1,0 +1,18 @@
+<launch>
+
+  <!-- OMPL Plugin for MoveIt! -->
+  <arg name="planning_plugin" value="pilz::CommandPlanner" />
+
+  <!-- The request adapters (plugins) used when planning with OMPL. 
+       ORDER MATTERS -->
+  <arg name="planning_adapters" value="" />
+
+  <arg name="start_state_max_bounds_error" value="0.1" />
+
+  <param name="planning_plugin" value="$(arg planning_plugin)" />
+  <param name="request_adapters" value="$(arg planning_adapters)" />
+  <param name="start_state_max_bounds_error" value="$(arg start_state_max_bounds_error)" />
+
+  <!--<rosparam command="load" file="$(find prbt_moveit_config)/config/ompl_planning.yaml"/>-->
+
+</launch>

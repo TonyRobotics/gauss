@@ -16,5 +16,5 @@ stepper_3_direction: 1
 stepper_4_direction: -1
 stepper_1_max_effort: 2000
 stepper_2_max_effort: 2234
-stepper_3_max_effort: 2792
+stepper_3_max_effort: 2234
 stepper_4_max_effort: 2000

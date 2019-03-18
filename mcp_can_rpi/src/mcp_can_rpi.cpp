@@ -1,7 +1,7 @@
 /*
     mcp_can_rpi.cpp
   	This library is an adaptation of MCP_CAN library for Raspberry Pi 3 with wiringPi
-    Copyright (C) 2017 TonyRobotics
+    Copyright (C) 2017 Niryo
     All rights reserved.
 
     This program is free software: you can redistribute it and/or modify

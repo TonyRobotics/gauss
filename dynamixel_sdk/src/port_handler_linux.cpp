@@ -1,6 +1,6 @@
 /*
  * port_handler_linux.cpp
- * Copyright (c) 2017, TonyRobotics
+ * Copyright (c) 2017, Niryo
  * All rights reserved.
  *
  * This library is an adaptation of dynamixel_sdk library for Raspberry Pi 3 with wiringPi

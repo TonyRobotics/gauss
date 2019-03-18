@@ -17,6 +17,7 @@ processes:
       launch_on_startup: true
       delay_before_start: 4.0 # Additional delay for Moveit to load controllers
       cmd: 'roslaunch gauss_bringup robot_commander.launch'
+      # cmd: 'roslaunch gauss_bringup robot_commander_pilz.launch'
       args: 
           []
       dependencies:

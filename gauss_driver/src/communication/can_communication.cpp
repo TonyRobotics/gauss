@@ -475,13 +475,15 @@ void CanCommunication::hardwareControlCheckConnection()
             hw_check_connection_frequency = 5.0;
         }
         double timeout_read = 1.0/hw_check_connection_frequency;
-        int max_fail_counter = (int) (hw_check_connection_frequency + 0.5); // connection error will be detected after 1 sec
+        int max_fail_counter = (int) (hw_check_connection_frequency + 9.5); // connection error will be detected after 1 sec
 
         for (int i = 0; i < motors.size(); i++) {
             if (motors.at(i)->isEnabled()) {
                 if (time_now - motors.at(i)->getLastTimeRead() > timeout_read * (motors.at(i)->getHwFailCounter() + 1)) {
                     ROS_ERROR("CAN connection problem with motor %d, hw fail counter : %d", motors.at(i)->getId(), motors.at(i)->getHwFailCounter());
                     if (motors.at(i)->getHwFailCounter() >= max_fail_counter) {
+                        ROS_ERROR("CAN connection problem, max_fail_counter %d", max_fail_counter);
+
                         is_can_connection_ok = false;
                         debug_error_message = "Connection problem with CAN bus. Motor ";
                         debug_error_message += std::to_string(motors.at(i)->getId());

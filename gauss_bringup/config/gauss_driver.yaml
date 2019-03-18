@@ -20,7 +20,7 @@ gpio_can_interrupt: 6
 #  Those params have been chosen to get a good (connection performance + speed / CPU usage) ratio
 #
 
-ros_control_loop_frequency:              100.0
+ros_control_loop_frequency:              50.0
 
 gauss_hw_check_connection_frequency: 2.0
 publish_hw_status_frequency:             1.0
@@ -35,4 +35,4 @@ dxl_hw_status_read_frequency:            0.5
 
 can_hardware_control_loop_frequency:     1500.0
 can_hw_write_frequency:                  50.0
-can_hw_check_connection_frequency:       3.0
+can_hw_check_connection_frequency:       1.0

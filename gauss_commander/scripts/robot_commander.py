@@ -179,42 +179,43 @@ class RobotCommander:
                     self.arm_commander.set_joint_target(cmd.joints)
                     self.gauss_ros_logger.publish_log_status("INFO", "RobotCommander set_joint_target")
                 elif cmd_type == CommandType.POSE:
-                    # self.arm_commander.set_pose_target(cmd.position.x, cmd.position.y, cmd.position.z,
-                    #                                    cmd.rpy.roll, cmd.rpy.pitch, cmd.rpy.yaw)
-                    print "r p y got ~~~~~~~~~~~~~~~~~~~~~~~"
-                    print  cmd.rpy.roll
-                    print  cmd.rpy.pitch
-                    print  cmd.rpy.yaw
+                    self.arm_commander.set_pose_target(cmd.position.x, cmd.position.y, cmd.position.z,
+                                                       cmd.rpy.roll, cmd.rpy.pitch, cmd.rpy.yaw)
+                                                       
+                    # print "r p y got ~~~~~~~~~~~~~~~~~~~~~~~"
+                    # print  cmd.rpy.roll
+                    # print  cmd.rpy.pitch
+                    # print  cmd.rpy.yaw
                     
-                    pose_goal = geometry_msgs.msg.Pose()
-                    (qx, qy, qz, qw) = tf.transformations.quaternion_from_euler(cmd.rpy.roll, cmd.rpy.pitch, cmd.rpy.yaw)
-                    pose_goal.orientation.w = qw
-                    pose_goal.orientation.x = qx
-                    pose_goal.orientation.y = qy
-                    pose_goal.orientation.z = qz
-                    pose_goal.position.x = cmd.position.x 
-                    pose_goal.position.y = cmd.position.y
-                    pose_goal.position.z = cmd.position.z
+                    # pose_goal = geometry_msgs.msg.Pose()
+                    # (qx, qy, qz, qw) = tf.transformations.quaternion_from_euler(cmd.rpy.roll, cmd.rpy.pitch, cmd.rpy.yaw)
+                    # pose_goal.orientation.w = qw
+                    # pose_goal.orientation.x = qx
+                    # pose_goal.orientation.y = qy
+                    # pose_goal.orientation.z = qz
+                    # pose_goal.position.x = cmd.position.x 
+                    # pose_goal.position.y = cmd.position.y
+                    # pose_goal.position.z = cmd.position.z
 
-                    print "orientation send ~~~~~~~~~~~~~~~~~~~~~~~"
-                    print  qx
-                    print  qy
-                    print  qz
-                    print  qw
+                    # print "orientation send ~~~~~~~~~~~~~~~~~~~~~~~"
+                    # print  qx
+                    # print  qy
+                    # print  qz
+                    # print  qw
                     
-                    poses = []
-                    poses.append(copy.deepcopy(pose_goal))
-                    resp = self.calculate_pose_ik(poses)
-                    pos_list = resp.points[0].positions
-                    print "~~~~~~~~~~~~~~~~~~~~~~~~~~~pos_list"
-                    print pos_list
-                    for i in pos_list:
-                        if str(i) == 'nan':
-                            print "warning, got a nan joint value, failed to plan pose"
-                            status, message = (400, "pose plan failed")
-                            return status, message
+                    # poses = []
+                    # poses.append(copy.deepcopy(pose_goal))
+                    # resp = self.calculate_pose_ik(poses)
+                    # pos_list = resp.points[0].positions
+                    # print "~~~~~~~~~~~~~~~~~~~~~~~~~~~pos_list"
+                    # print pos_list
+                    # for i in pos_list:
+                    #     if str(i) == 'nan':
+                    #         print "warning, got a nan joint value, failed to plan pose"
+                    #         status, message = (400, "pose plan failed")
+                    #         return status, message
                   
-                    self.arm_commander.set_joint_target(resp.points[0].positions)
+                    # self.arm_commander.set_joint_target(resp.points[0].positions)
 
                     self.gauss_ros_logger.publish_log_status("INFO", "RobotCommander set_pose_target")                    
                 elif cmd_type == CommandType.POSITION:

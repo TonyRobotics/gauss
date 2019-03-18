@@ -29,7 +29,7 @@ from gauss_commander.move_group_arm import MoveGroupArm
 from gauss_commander.robot_commander_exception import RobotCommanderException
 from gauss_commander.command_status import CommandStatus
 
-TrajectoryTimeOutMin = 20
+TrajectoryTimeOutMin = 5
 class ArmCommander:
 
 
@@ -53,7 +53,7 @@ class ArmCommander:
                     self.gauss_ros_logger.publish_log_status("INFO", "ArmCommander Command has been successfully processed")
                     return CommandStatus.SUCCESS, "Command has been successfully processed"
                 elif self.current_goal_result == GoalStatus.PREEMPTED:
-                    self.gauss_ros_logger.publish_log_status("INFO", "ArmCommander Command has been successfully stopped")
+                    self.gauss_ros_logger.publish_log_status("WARNING", "ArmCommander Command has been successfully stopped")
                     return CommandStatus.STOPPED, "Command has been successfully stopped"
                 elif self.current_goal_result == GoalStatus.ABORTED:
                     # if joint_trajectory_controller aborts the goal, it will still try to 
@@ -70,7 +70,7 @@ class ArmCommander:
                 plan = None
                 self.gauss_ros_logger.publish_log_status("ERROR", "Trajectory timeout - Try to resend the command or restart the robot")
                 raise RobotCommanderException(CommandStatus.CONTROLLER_PROBLEMS,
-                        "Trajectory timeout - Try to restart the robot")
+                        "Trajectory timeout - Try to resend the command or restart the robot")
         else:
             raise RobotCommanderException(CommandStatus.NO_PLAN_AVAILABLE,
                     "You are trying to execute a plan which does't exist")
