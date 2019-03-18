@@ -1,9 +1,7 @@
 
  Gauss6500 机械臂
 
- [![Gitter](https://badges.gitter.im/tonyrobotics-ros/community.svg)](https://gitter.im/tonyrobotics-ros/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-
-[机械臂主页](http://gauss.tonyrobotics.com/ "机械臂主页")  
+ [机械臂主页](http://gauss.tonyrobotics.com/ "机械臂主页")  
 
 [淘宝网址](https://item.taobao.com/item.htm?spm=a230r.1.14.1.46962f47OKzNW6&id=586250996678&ns=1&abbucket=10#detail "淘宝网址")
 
@@ -14,6 +12,8 @@
 [Python开发文档](https://www.kancloud.cn/itfanr/gauss_doc_1/971823 "Python开发文档")
 
 [知乎专栏](https://zhuanlan.zhihu.com/c_1086677718430425088 "知乎专栏")
+
+[相关博客](https://blog.csdn.net/itfanr/article/details/87078352)
 
 机械臂在 Gazebo 的仿真界面： 
 ![gauss_gazebo](gauss6500/img/gauss_gazebo.png)
