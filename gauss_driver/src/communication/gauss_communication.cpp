@@ -141,7 +141,7 @@ void GaussCommunication::manageCanConnectionLoop()
                         && (calibration_step2_result == CAN_STEPPERS_CALIBRATION_OK)) {
                     motors_ok = true;
                     new_calibration_requested = false;
-                    activateLearningMode(true);
+                    activateLearningMode(false);
                     ROS_INFO("calibration success"); 
                 }
                 else {
