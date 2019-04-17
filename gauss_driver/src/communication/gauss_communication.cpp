@@ -18,10 +18,17 @@
 
 #include "gauss_driver/communication/gauss_communication.h"
 
-GaussCommunication::GaussCommunication(int hardware_version)
+GaussCommunication::GaussCommunication(int hardware_version, int can_protocol_version)
 {
     this->hardware_version = hardware_version;
-    
+    can_protocol_version_ = can_protocol_version;
+
+    if (can_protocol_version_ != 1 && can_protocol_version_ != 2) {
+        std::string debug_error_message = "GaussCommunication init failed, Incorrect protocol_version_, should be 1 or 2";
+        ROS_ERROR("%s", debug_error_message.c_str());
+        assert(0);
+    }
+
     ros::param::get("~can_enabled", can_enabled);
     ros::param::get("~dxl_enabled", dxl_enabled);
     ros::param::get("~gauss_hw_check_connection_frequency", gauss_hw_check_connection_frequency);
@@ -51,7 +58,9 @@ int GaussCommunication::init()
 {
     int result = 0;
     if (can_enabled) {
-        result = canComm->init(hardware_version);
+        result = canComm->init(hardware_version, can_protocol_version_);
+        ROS_WARN("can_protocol_version_ %d", can_protocol_version_);
+
         if (result != 0) {
             return result;
         }
@@ -453,6 +462,35 @@ void GaussCommunication::getCurrentPosition(double pos[6])
     }
 }
 
+void GaussCommunication::getCurrentPosVel(double pos[6], double vel[6])
+{
+    if (hardware_version == 1) {
+        if (can_enabled) { canComm->getCurrentPosVel(pos, vel); }
+        if (dxl_enabled) { dxlComm->getCurrentPositionV1(&pos[4], &pos[5]); }
+
+        // if disabled (debug purposes)
+        // if (!can_enabled) {
+        //     pos[0] = pos_can_disabled_v1[0];
+        //     pos[1] = pos_can_disabled_v1[1];
+        //     pos[2] = pos_can_disabled_v1[2];
+        //     pos[3] = pos_can_disabled_v1[3];
+        // }
+
+        // if (!dxl_enabled) {
+        //     pos[4] = pos_dxl_disabled_v1[0];
+        //     pos[5] = pos_dxl_disabled_v1[1];
+        // }
+    }
+}
+
+void GaussCommunication::getCurrentPosTemp(double pos[6], double temp[6])
+{
+    if (hardware_version == 1 && can_protocol_version_ == 2) {
+        if (can_enabled) { canComm->getCurrentPosTemp(pos, temp); }
+        if (dxl_enabled) { dxlComm->getCurrentPositionV1(&pos[4], &pos[5]); }       
+    }
+}
+
 void GaussCommunication::sendPositionToRobot(const double cmd[6])
 {
     bool is_calibration_in_progress = false;
@@ -495,6 +533,30 @@ void GaussCommunication::sendPositionToRobot(const double cmd[6])
                 pos_dxl_disabled_v2[1] = cmd[4];
                 pos_dxl_disabled_v2[2] = cmd[5];
             }
+        }
+    }
+}
+
+void GaussCommunication::sendPositionVelocityToRobot(const double pos_cmd[6], const double vel_cmd[6])
+{
+    if(2 == can_protocol_version_){
+        bool is_calibration_in_progress = false;
+        if (can_enabled) {
+            is_calibration_in_progress = canComm->isCalibrationInProgress();
+        }
+
+        // don't send position command when calibrating motors
+        if (!is_calibration_in_progress) {
+            if (can_enabled) {
+                canComm->setGoalPositionV1(pos_cmd[0], pos_cmd[1], pos_cmd[2], pos_cmd[3]);
+                canComm->setGoalVelocityV1(vel_cmd[0], vel_cmd[1], vel_cmd[2], vel_cmd[3]);
+                // std::cout<<"~~~~~~~~~~~~~~~~ write"<<std::endl;
+                // std::cout<<"sendPositionVelocityToRobot write: "<< pos_cmd[0]<<std::endl;
+                // std::cout<<"sendPositionVelocityToRobot write: "<< pos_cmd[1]<<std::endl;
+                // std::cout<<"sendPositionVelocityToRobot write: "<< vel_cmd[2]<<std::endl;
+                // std::cout<<"sendPositionVelocityToRobot write: "<< pos_cmd[3]<<std::endl;
+            }
+            if (dxl_enabled) { dxlComm->setGoalPositionV1(pos_cmd[4], pos_cmd[5]); }
         }
     }
 }
@@ -558,4 +620,9 @@ int GaussCommunication::closeGripper(uint8_t id, uint16_t close_position, uint16
         return dxlComm->closeGripper(id, close_position, close_speed, close_hold_torque, close_max_torque);
     }
     return GRIPPER_STATE_CLOSE;
+}
+
+int GaussCommunication::getCANProtocolVersion()
+{
+    return can_protocol_version_;
 }

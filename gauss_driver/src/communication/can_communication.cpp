@@ -17,6 +17,8 @@
 */
 
 #include "gauss_driver/communication/can_communication.h"
+#include <time.h>
+#include <sys/timeb.h>
 
 int32_t CanCommunication::rad_pos_to_steps(double position_rad, double gear_ratio, double direction)
 {
@@ -28,17 +30,43 @@ double CanCommunication::steps_to_rad_pos(int32_t steps, double gear_ratio, doub
     return (double) ((double)steps * 360.0 / (200.0 * 8.0 * gear_ratio * RADIAN_TO_DEGREE)) * direction ;
 }
 
+double CanCommunication::vel_rad_to_steps(double vel_rad, double gear_ratio)
+{
+    // std::cout<<"~~~~~~~~~~~~~~~"<<std::endl;
+    // std::cout<<"vel_rad "<<vel_rad<<std::endl;
+    // std::cout<<"gear_ratio "<<gear_ratio<<std::endl; 
+    // double steps_per_second = (double)(RADIAN_TO_DEGREE * gear_ratio /1.8* 8) * abs(vel_rad);
+    double steps_per_second;
+    double one_rad_vel = (double)(RADIAN_TO_DEGREE * gear_ratio /1.8* 8);
+    // std::cout<<"one_rad_vel "<<one_rad_vel<<std::endl;
+    double vel_rad_tmp = (vel_rad >=0) ? vel_rad : (-1 * vel_rad);
+    steps_per_second = one_rad_vel * vel_rad_tmp;
+    // std::cout<<"steps_per_second "<<steps_per_second<<std::endl; 
+
+    if(0 == steps_per_second) {
+        return -1;
+    }
+    return ((double)(1/steps_per_second)) * 1000000;
+}
+
 CanCommunication::CanCommunication()
 {
 
 }
 
-int CanCommunication::init(int hardware_version)
+int CanCommunication::init(int hardware_version, int protocol_version)
 {
     this->hardware_version = hardware_version;
-    
+    protocol_version_ = protocol_version;
+
     if (hardware_version != 1 && hardware_version != 2) {
         debug_error_message = "Incorrect hardware version, should be 1 or 2";
+        ROS_ERROR("%s", debug_error_message.c_str());
+        return -1;
+    }
+
+    if (protocol_version_ != 1 && protocol_version_ != 2) {
+        debug_error_message = "CanCommunication init failed, Incorrect protocol_version_, should be 1 or 2";
         ROS_ERROR("%s", debug_error_message.c_str());
         return -1;
     }
@@ -59,7 +87,7 @@ int CanCommunication::init(int hardware_version)
     resetHardwareControlLoopRates();
 
     // start can driver
-    can.reset(new GaussCanDriver(spi_channel, spi_baudrate, gpio_can_interrupt));
+    can.reset(new GaussCanDriver(spi_channel, spi_baudrate, gpio_can_interrupt, protocol_version_));
 
     is_can_connection_ok = false;
     debug_error_message = "No connection with CAN motors has been made yet";
@@ -235,120 +263,269 @@ void CanCommunication::stopHardwareControlLoop()
 
 void CanCommunication::hardwareControlRead()
 {
-    if (can->canReadData()) {
-        long unsigned int rxId;
-        unsigned char len;
-        unsigned char rxBuf[8];
-        
-        can->readMsgBuf(&rxId, &len, rxBuf);
-        
-        // 0. This functionality will come later, to allow user to plug other CAN devices to RPI
-        // Developement to do here : check if id >= 0x20
-        // Ids between 0x00 and 0x1F are reserved for Gauss core communication
-        // Those are lower ids with higher priority, to ensure connection with motors is always up.
-        if (rxId >= 0x20) {
-            // send frame to another place and return
-        }
+    // ROS_INFO("CanComm : hardwareControlRead, protocol_version_ %d", protocol_version_);
 
-        // 1. Validate motor id
-        int motor_id = rxId & 0x0F; // 0x11 for id 1, 0x12 for id 2, ...
-        bool motor_found = false;
-        for (int i = 0; i < motors.size(); i++) {
-            if (motor_id == motors.at(i)->getId()) {
-                motors.at(i)->setLastTimeRead(ros::Time::now().toSec());
-                motor_found = true;
-                break;
-            }
-        }
-       
-        if (!motor_found) {
-            ROS_ERROR("Received can frame with wrong id : %d", motor_id);
-            debug_error_message = "Unallowed connected motor : ";
-            debug_error_message += std::to_string(motor_id);
-            is_can_connection_ok = false;
-            return;
-        }
-
-        // 1.1 Check buffer is not empty
-        if (len < 1) {
-            ROS_ERROR("Received can frame with empty data");
-            return;
-        }
-
-        // 2. If id ok, check control byte and fill data
-        int control_byte = rxBuf[0];
-        
-        if (control_byte == CAN_DATA_POSITION) {
-            // check length 
-            if (len != 4) {
-                ROS_ERROR("Position can frame should contain 4 data bytes");
-                return;
-            }
+    if(1 == protocol_version_){
+        if (can->canReadData()) {
+            long unsigned int rxId;
+            unsigned char len;
+            unsigned char rxBuf[8];
             
-            int32_t pos = (rxBuf[1] << 16) + (rxBuf[2] << 8) + rxBuf[3];
-            if (pos & (1 << 15)) {
-            	pos = -1 * ((~pos + 1) & 0xFFFF);
-          	} 
-           
-            // fill data
-            for (int i = 0; i < motors.size() ; i++) {
-                if (motor_id == motors.at(i)->getId() && motors.at(i)->isEnabled()) {
-                    motors.at(i)->setPositionState(pos);
-                    break;
-                }
+            can->readMsgBuf(&rxId, &len, rxBuf);
+            
+            // 0. This functionality will come later, to allow user to plug other CAN devices to RPI
+            // Developement to do here : check if id >= 0x20
+            // Ids between 0x00 and 0x1F are reserved for Gauss core communication
+            // Those are lower ids with higher priority, to ensure connection with motors is always up.
+            if (rxId >= 0x20) {
+                // send frame to another place and return
             }
-        }
-        else if (control_byte == CAN_DATA_DIAGNOSTICS) {
-            // check data length
-            if (len != 4) {
-                ROS_ERROR("Diagnostic can frame should contain 4 data bytes");
-                return;
-            }
-            int mode = rxBuf[1];
-            int driver_temp_raw = (rxBuf[2] << 8) + rxBuf[3];
-            /*
-            double a = -0.00316;
-            double b = -12.924;
-            double c = 2367.7;
-            double v_temp = driver_temp_raw * 3.3 / 1024.0 * 1000.0;
-            int driver_temp = int((-b - std::sqrt(b*b - 4*a*(c - v_temp)))/(2*a)+30);
-            */
-            double v_temp = driver_temp_raw * 3.3 / 4096.0;
-            int driver_temp = (int)((1.43 - v_temp) / 0.0043 + 25);
 
-            // fill data
-            for (int i = 0; i < motors.size() ; i++) {
-                if (motor_id == motors.at(i)->getId() && motors.at(i)->isEnabled()) {
-                    motors.at(i)->setTemperatureState(driver_temp);
-                    break;
-                }
-            }
-            //ROS_INFO("Mode : %d, Temp : %d", mode, m1.getTemperatureState());
-        }
-        else if (control_byte == CAN_DATA_FIRMWARE_VERSION) {
-            if (len != 4) {
-                ROS_ERROR("Firmware version frame should contain 4 bytes");
-                return;
-            }
-            int v_major = rxBuf[1];
-            int v_minor = rxBuf[2];
-            int v_patch = rxBuf[3];
-            std::string version = "";
-            version += std::to_string(v_major); version += "."; 
-            version += std::to_string(v_minor); version += "."; 
-            version += std::to_string(v_patch);
-
-            // fill data
+            // 1. Validate motor id
+            int motor_id = rxId & 0x0F; // 0x11 for id 1, 0x12 for id 2, ...
+            bool motor_found = false;
             for (int i = 0; i < motors.size(); i++) {
-                if (motor_id == motors.at(i)->getId() && motors.at(i)->isEnabled()) {
-                    motors.at(i)->setFirmwareVersion(version);
+                if (motor_id == motors.at(i)->getId()) {
+                    motors.at(i)->setLastTimeRead(ros::Time::now().toSec());
+                    motor_found = true;
+                    break;
+                }
+            }
+        
+            if (!motor_found) {
+                ROS_ERROR("Received can frame with wrong id : %d", motor_id);
+                debug_error_message = "Unallowed connected motor : ";
+                debug_error_message += std::to_string(motor_id);
+                is_can_connection_ok = false;
+                return;
+            }
+
+            // 1.1 Check buffer is not empty
+            if (len < 1) {
+                ROS_ERROR("Received can frame with empty data");
+                return;
+            }
+
+            // 2. If id ok, check control byte and fill data
+            int control_byte = rxBuf[0];
+            
+            if (control_byte == CAN_DATA_POSITION) {
+                // check length 
+                if (len != 4) {
+                    ROS_ERROR("Position can frame should contain 4 data bytes");
                     return;
                 }
+                
+                int32_t pos = (rxBuf[1] << 16) + (rxBuf[2] << 8) + rxBuf[3];
+                if (pos & (1 << 15)) {
+                    pos = -1 * ((~pos + 1) & 0xFFFF);
+                } 
+            
+                // fill data
+                for (int i = 0; i < motors.size() ; i++) {
+                    if (motor_id == motors.at(i)->getId() && motors.at(i)->isEnabled()) {
+                        motors.at(i)->setPositionState(pos);
+                        break;
+                    }
+                }
+            }
+            else if (control_byte == CAN_DATA_DIAGNOSTICS) {
+                // check data length
+                if (len != 4) {
+                    ROS_ERROR("Diagnostic can frame should contain 4 data bytes");
+                    return;
+                }
+                int mode = rxBuf[1];
+                int driver_temp_raw = (rxBuf[2] << 8) + rxBuf[3];
+                /*
+                double a = -0.00316;
+                double b = -12.924;
+                double c = 2367.7;
+                double v_temp = driver_temp_raw * 3.3 / 1024.0 * 1000.0;
+                int driver_temp = int((-b - std::sqrt(b*b - 4*a*(c - v_temp)))/(2*a)+30);
+                */
+                double v_temp = driver_temp_raw * 3.3 / 4096.0;
+                int driver_temp = (int)((1.43 - v_temp) / 0.0043 + 25);
+
+                // fill data
+                for (int i = 0; i < motors.size() ; i++) {
+                    if (motor_id == motors.at(i)->getId() && motors.at(i)->isEnabled()) {
+                        motors.at(i)->setTemperatureState(driver_temp);
+                        break;
+                    }
+                }
+                //ROS_INFO("Mode : %d, Temp : %d", mode, m1.getTemperatureState());
+            }
+            else if (control_byte == CAN_DATA_FIRMWARE_VERSION) {
+                if (len != 4) {
+                    ROS_ERROR("Firmware version frame should contain 4 bytes");
+                    return;
+                }
+                int v_major = rxBuf[1];
+                int v_minor = rxBuf[2];
+                int v_patch = rxBuf[3];
+                std::string version = "";
+                version += std::to_string(v_major); version += "."; 
+                version += std::to_string(v_minor); version += "."; 
+                version += std::to_string(v_patch);
+
+                // fill data
+                for (int i = 0; i < motors.size(); i++) {
+                    if (motor_id == motors.at(i)->getId() && motors.at(i)->isEnabled()) {
+                        motors.at(i)->setFirmwareVersion(version);
+                        return;
+                    }
+                }
+            }
+            else {
+                ROS_ERROR("Received can frame with unknown control byte");
+                return;
             }
         }
-        else {
-            ROS_ERROR("Received can frame with unknown control byte");
-            return;
+    }else if(2 == protocol_version_ ){
+        //send and receive the pos and temp
+            for (int i = 0 ; i < motors.size(); i++) {
+                // sleep(1);
+                // struct NowDate
+                // {
+                //     char tmp0[16]; //年月日
+                //     char tmp1[16]; //时分秒
+                //     char tmp2[4];  //毫秒
+                // };
+                // time_t timep;
+                // time (&timep);
+                // NowDate date;
+
+                // strftime(date.tmp0, sizeof(date.tmp0), "%Y-%m-%d ",localtime(&timep) );
+                // strftime(date.tmp1, sizeof(date.tmp1), "%H:%M:%S ",localtime(&timep) );
+
+                // struct timeb tb;
+                // ftime(&tb);     
+                // sprintf(date.tmp2," %d ",tb.millitm);
+                // std::cout << date.tmp0 << date.tmp1 << date.tmp2 <<std::endl;
+        
+                if (motors.at(i)->isEnabled()) {
+                    //send ------------------
+                    int try_send_count = 0;
+                    while(try_send_count++ <10){
+                        if (can->sendReadPoTempCommand(motors.at(i)->getId()) != CAN_OK) {
+                            ROS_ERROR("Failed to send position, now retry, motor %d", motors.at(i)->getId());
+                        }else{
+                            // std::cout<<"step 1, successfully first send motor_id: " << motors.at(i)->getId()<<std::endl;
+                            try_send_count = 0;
+                            break;
+                        } 
+                    }
+                    if(try_send_count == 10){
+                        ROS_ERROR("Failed to send position, skip motor %d", motors.at(i)->getId());
+                        continue;
+                    }
+
+                    int try_read_count = 0;
+                    bool have_gotten_data = false;
+                    while(try_read_count++ <100 && !have_gotten_data) {
+                        // sleep(1);
+                        // std::cout<<"step 2, try_read_count: " << try_read_count <<std::endl;
+                        // usleep(100);           
+                        if(can->canReadData()) { //we got data
+                            // std::cout<<"step 3, can->canReadData is true ```````````````` " <<std::endl;
+                            // sleep(1);
+                            have_gotten_data = true;
+                            // try_read_count = 0 ;
+                            long unsigned int rxId;
+                            unsigned char len;
+                            unsigned char rxBuf[8];
+                            // do{
+                            can->readMsgBuf(&rxId, &len, rxBuf);
+
+                            // 0. This functionality will come later, to allow user to plug other CAN devices to RPI
+                            // Developement to do here : check if id >= 0x20
+                            // Ids between 0x00 and 0x1F are reserved for Gauss core communication
+                            // Those are lower ids with higher priority, to ensure connection with motors is always up.
+                            if (rxId >= 0x20) {
+                                // send frame to another place and return
+                            }
+
+                            int motor_id = rxId & 0x0F; // 0x11 for id 1, 0x12 for id 2, ...
+                            int found_motor_i = -1 ;
+                            if(motor_id >=1 && motor_id <=4) {
+
+                                // for(int i = 0; i < motors.size(); i++)
+                                // {
+                                //     if(motor_id ==  motors.at(i)->getId()){
+                                //         found_motor_i = i;
+                                //         ROS_INFO("Received motor_id %d, found_motor_i %d", motor_id, found_motor_i);
+                                //         break;
+                                //     }else{
+                                //         found_motor_i = motor_id -1 ;
+                                //     }
+                                // }
+                                found_motor_i = motor_id -1 ;
+                                // ROS_INFO("Received motor_id %d, found_motor_i %d", motor_id, found_motor_i);
+
+                                // std::cout<<"step 3, motor_id is "<<motor_id<<std::endl;
+                                motors.at(found_motor_i)->setLastTimeRead(ros::Time::now().toSec());                          
+
+                                // 1.1 Check buffer is not empty
+                                if (len < 1) {
+                                    ROS_ERROR("Received can frame with empty data");
+                                    return;
+                                }
+
+                                // 2. If id ok, check control byte and fill data
+                                int control_byte_first = rxBuf[0];
+                                int control_byte_second = rxBuf[1];
+                                
+                                if ((control_byte_first == CAN_CMD_READ) && (control_byte_second == CAN_CMD_READ_POS_TEMP)) {
+                                    // check length 
+                                    if (len != 7) {
+                                        ROS_ERROR("Position can frame should contain 4 data bytes");
+                                        return;
+                                    }
+                                    // ROS_INFO("Receive data and parse it");
+                                    
+                                    int32_t pos = (rxBuf[2] << 16) + (rxBuf[3] << 8) + rxBuf[4];
+                                    if (pos & (1 << 15)) {
+                                        pos = -1 * ((~pos + 1) & 0xFFFF);
+                                    } 
+                                
+                                    // fill data
+                                    motors.at(found_motor_i)->setPositionState(pos);
+
+                                    // int mode = rxBuf[1];
+                                    int driver_temp_raw = (rxBuf[5] << 8) + rxBuf[6];
+                                    /*
+                                    double a = -0.00316;
+                                    double b = -12.924;
+                                    double c = 2367.7;
+                                    double v_temp = driver_temp_raw * 3.3 / 1024.0 * 1000.0;
+                                    int driver_temp = int((-b - std::sqrt(b*b - 4*a*(c - v_temp)))/(2*a)+30);
+                                    */
+                                    double v_temp = driver_temp_raw * 3.3 / 4096.0;
+                                    int driver_temp = (int)((1.43 - v_temp) / 0.0043 + 25);
+
+                                    // fill data
+                                    motors.at(found_motor_i)->setTemperatureState(driver_temp);                                     
+                                }else{
+                                    ROS_ERROR("data parse error");
+                                    ROS_ERROR("Received control_byte_first %d, control_byte_second %d", control_byte_first, control_byte_second);
+                                }
+                            }
+                                // sleep(1);
+                            // } while(can->canReadData());                    
+                                                                
+                            }else {
+                                ROS_ERROR("step 2, failed to get data from spi, retry, motor id %d", motors.at(i)->getId());
+                                // sleep(1);
+                            }//check spi data over
+                        } //while check over
+
+                        if(100 == try_read_count){
+                            // try_read_count = 0;
+                            ROS_ERROR("step 6, Failed to get data from motor id %d, check next motor", motors.at(i)->getId());
+                        }              
+                }
+                // usleep(10);
         }
     }
 }
@@ -404,9 +581,21 @@ void CanCommunication::hardwareControlWrite()
             
             for (int i = 0 ; i < motors.size(); i++) {
                 if (motors.at(i)->isEnabled()) {
-                    if (can->sendPositionCommand(motors.at(i)->getId(), motors.at(i)->getPositionCommand()) != CAN_OK) {
-                        //ROS_ERROR("Failed to send position");
+                    if(1 == protocol_version_){
+                        // ROS_INFO("sendPositionCommand pos %d", motors.at(i)->getPositionCommand());
+
+                        if (can->sendPositionCommand(motors.at(i)->getId(), motors.at(i)->getPositionCommand()) != CAN_OK) {
+                            //ROS_ERROR("Failed to send position");
+                        }
+                    }else if(2 == protocol_version_) {
+                        // printf("send Command pos %d vel %d\n", motors.at(i)->getPositionCommand(), motors.at(i)->getVelocityCommand());
+
+                        if (can->sendPositionVelocityCommand(motors.at(i)->getId(), 
+                                motors.at(i)->getPositionCommand(), motors.at(i)->getVelocityCommand()) != CAN_OK) {
+                            // ROS_ERROR("Failed to send position");
+                        }
                     }
+                    
                 }
             }
         }
@@ -884,6 +1073,25 @@ void CanCommunication::setGoalPositionV2(double axis_1_pos_goal, double axis_2_p
     }
 }
 
+void CanCommunication::setGoalVelocityV1(double axis_1_vel_goal, double axis_2_vel_goal, double axis_3_vel_goal, double axis_4_vel_goal)
+{
+    std::vector<double> vel_cmd;
+    vel_cmd.push_back(vel_rad_to_steps(axis_1_vel_goal, m1.getGearRatio()));
+    vel_cmd.push_back(vel_rad_to_steps(axis_2_vel_goal, m2.getGearRatio()));
+    vel_cmd.push_back(vel_rad_to_steps(axis_3_vel_goal, m3.getGearRatio()));
+    vel_cmd.push_back(vel_rad_to_steps(axis_4_vel_goal, m4.getGearRatio()));
+
+    if(2 == protocol_version_){
+  
+        // std::cout<<" 3 ---  axis_3_vel_goal  " <<axis_3_vel_goal<< "  vel_rad_to_steps  "<< vel_cmd[2] <<std::endl;
+        for (int i = 0 ; i < motors.size(); i++) {
+            if (motors.at(i)->isEnabled()) {
+                motors.at(i)->setVelocityCommand(vel_cmd[i]);
+            }
+        }
+    }
+}
+
 void CanCommunication::getCurrentPositionV1(double *axis_1_pos, double *axis_2_pos, double *axis_3_pos, double *axis_4_pos)
 {
     if (hardware_version == 1) {
@@ -900,6 +1108,36 @@ void CanCommunication::getCurrentPositionV2(double *axis_1_pos, double *axis_2_p
         *axis_1_pos = steps_to_rad_pos(m1.getPositionState(), m1.getGearRatio(), m1.getDirection());
         *axis_2_pos = steps_to_rad_pos(m2.getPositionState(), m2.getGearRatio(), m2.getDirection());
         *axis_3_pos = steps_to_rad_pos(m3.getPositionState(), m3.getGearRatio(), m3.getDirection());
+    }
+}
+
+void CanCommunication::getCurrentPosVel(double pos[6], double vel[6])
+{
+    // if (hardware_version == 1 && protocol_version_ == 2) {
+    //    pos[0] = steps_to_rad_pos(m1.getPositionState(), m1.getGearRatio(), m1.getDirection());
+    //    pos[1] = steps_to_rad_pos(m2.getPositionState(), m2.getGearRatio(), m2.getDirection());
+    //    pos[2] = steps_to_rad_pos(m3.getPositionState(), m3.getGearRatio(), m3.getDirection());
+    //    pos[3] = steps_to_rad_pos(m4.getPositionState(), m4.getGearRatio(), m4.getDirection());
+    // }
+}
+
+void CanCommunication::getCurrentPosTemp(double pos[4], double temp[4])
+{
+    if (hardware_version == 1 && protocol_version_ == 2) {
+        pos[0] = steps_to_rad_pos(m1.getPositionState(), m1.getGearRatio(), m1.getDirection());
+        pos[1] = steps_to_rad_pos(m2.getPositionState(), m2.getGearRatio(), m2.getDirection());
+        pos[2] = steps_to_rad_pos(m3.getPositionState(), m3.getGearRatio(), m3.getDirection());
+        pos[3] = steps_to_rad_pos(m4.getPositionState(), m4.getGearRatio(), m4.getDirection());
+
+        // std::cout<<"getCurrentPosTemp steps_to_rad_pos: "<< pos[0]<<std::endl;
+        // std::cout<<"getCurrentPosTemp steps_to_rad_pos: "<< pos[1]<<std::endl;
+        // std::cout<<"getCurrentPosTemp steps_to_rad_pos: "<< pos[2]<<std::endl;
+        // std::cout<<"getCurrentPosTemp steps_to_rad_pos: "<< pos[3]<<std::endl;
+
+        temp[0] =m1.getTemperatureState();
+        temp[1] =m2.getTemperatureState();
+        temp[2] =m3.getTemperatureState();
+        temp[3] =m4.getTemperatureState(); 
     }
 }
 
@@ -987,95 +1225,98 @@ bool CanCommunication::isConnectionOk()
  */
 int CanCommunication::scanAndCheck()
 {
-    int counter = 0;
+    if(1 == protocol_version_ ){
+        int counter = 0;
 
-    while (hw_is_busy && counter < 100) { 
-        ros::Duration(TIME_TO_WAIT_IF_BUSY).sleep();    
-        counter++;
-    }
-    
-    if (counter == 100) {
-        debug_error_message = "Failed to scan motors, CAN bus is too busy. Will retry...";
-        ROS_WARN("Failed to scan motors, CAN bus is too busy (counter max : %d)", counter);
-
-        std_msgs::String log_msg;
-        log_msg.data = std::string("gauss_driver WARNING ") + debug_error_message;
-        g_roslogger_pub.publish(log_msg);
-        return CAN_SCAN_BUSY;
-    }
-   
-    hw_is_busy = true;
-    
-    // if some motors are disabled, just declare them as connected
-    bool m1_ok = !m1.isEnabled(); 
-    bool m2_ok = !m2.isEnabled();
-    bool m3_ok = !m3.isEnabled();
-    bool m4_ok = !m4.isEnabled();
-   
-    double time_begin_scan = ros::Time::now().toSec();
-    double min_time_to_wait = 0.25;
-    double timeout = 0.5;
-
-    while (!m1_ok || !m2_ok || !m3_ok || !m4_ok || (ros::Time::now().toSec() - time_begin_scan < min_time_to_wait)) {
-        ros::Duration(0.001).sleep(); // check at 1000 Hz
+        while (hw_is_busy && counter < 100) { 
+            ros::Duration(TIME_TO_WAIT_IF_BUSY).sleep();    
+            counter++;
+        }
         
-        if (can->canReadData()) {
-            long unsigned int rxId;
-            unsigned char len;
-            unsigned char rxBuf[8];
+        if (counter == 100) {
+            debug_error_message = "Failed to scan motors, CAN bus is too busy. Will retry...";
+            ROS_WARN("Failed to scan motors, CAN bus is too busy (counter max : %d)", counter);
+
+            std_msgs::String log_msg;
+            log_msg.data = std::string("gauss_driver WARNING ") + debug_error_message;
+            g_roslogger_pub.publish(log_msg);
+            return CAN_SCAN_BUSY;
+        }
+    
+        hw_is_busy = true;
+        
+        // if some motors are disabled, just declare them as connected
+        bool m1_ok = !m1.isEnabled(); 
+        bool m2_ok = !m2.isEnabled();
+        bool m3_ok = !m3.isEnabled();
+        bool m4_ok = !m4.isEnabled();
+    
+        double time_begin_scan = ros::Time::now().toSec();
+        double min_time_to_wait = 0.25;
+        double timeout = 0.5;
+
+        while (!m1_ok || !m2_ok || !m3_ok || !m4_ok || (ros::Time::now().toSec() - time_begin_scan < min_time_to_wait)) {
+            ros::Duration(0.001).sleep(); // check at 1000 Hz            
             
-            can->readMsgBuf(&rxId, &len, rxBuf);
-            
-            // Validate id
-            int motor_id = rxId & 0x00F; // 0x101 for id 1, 0x102 for id 2, ...
-            if (motor_id == m1.getId()) {
-                m1_ok = true;
+            if (can->canReadData()) {
+                long unsigned int rxId;
+                unsigned char len;
+                unsigned char rxBuf[8];
+                
+                can->readMsgBuf(&rxId, &len, rxBuf);
+                
+                // Validate id
+                int motor_id = rxId & 0x00F; // 0x101 for id 1, 0x102 for id 2, ...
+                if (motor_id == m1.getId()) {
+                    m1_ok = true;
+                }
+                else if (motor_id == m2.getId()) {
+                    m2_ok = true;
+                }
+                else if (motor_id == m3.getId()) {
+                    m3_ok = true;
+                }
+                else if (hardware_version == 1 && motor_id == m4.getId()) { // m4 only for Gauss V1
+                    m4_ok = true;
+                }
+                else { // detect unallowed motor
+                    ROS_ERROR("Scan And Check : Received can frame with wrong id : %d", motor_id);
+                    hw_is_busy = false;
+                    debug_error_message = "Unallowed connected motor : ";
+                    debug_error_message += std::to_string(motor_id);
+
+                    std_msgs::String log_msg;
+                    log_msg.data = std::string("gauss_driver ERROR ") + debug_error_message;
+                    g_roslogger_pub.publish(log_msg);
+                    return CAN_SCAN_NOT_ALLOWED;
+                }
             }
-            else if (motor_id == m2.getId()) {
-                m2_ok = true;
-            }
-            else if (motor_id == m3.getId()) {
-                m3_ok = true;
-            }
-            else if (hardware_version == 1 && motor_id == m4.getId()) { // m4 only for Gauss V1
-                m4_ok = true;
-            }
-            else { // detect unallowed motor
-                ROS_ERROR("Scan And Check : Received can frame with wrong id : %d", motor_id);
+
+            if (ros::Time::now().toSec() - time_begin_scan > timeout) {
+                ROS_ERROR("CAN SCAN Timeout");
+                debug_error_message = "CAN bus scan failed : motors ";
+                if (!m1_ok) { debug_error_message += std::to_string(m1.getId()); debug_error_message += ", "; }
+                if (!m2_ok) { debug_error_message += std::to_string(m2.getId()); debug_error_message += ", "; }
+                if (!m3_ok) { debug_error_message += std::to_string(m3.getId()); debug_error_message += ", "; }
+                if (!m4_ok) { debug_error_message += std::to_string(m4.getId()); debug_error_message += ", "; }
+                debug_error_message += "are not connected";
+                is_can_connection_ok = false;
                 hw_is_busy = false;
-                debug_error_message = "Unallowed connected motor : ";
-                debug_error_message += std::to_string(motor_id);
 
                 std_msgs::String log_msg;
                 log_msg.data = std::string("gauss_driver ERROR ") + debug_error_message;
                 g_roslogger_pub.publish(log_msg);
-                return CAN_SCAN_NOT_ALLOWED;
+                return CAN_SCAN_TIMEOUT;
             }
         }
 
-        if (ros::Time::now().toSec() - time_begin_scan > timeout) {
-            ROS_ERROR("CAN SCAN Timeout");
-            debug_error_message = "CAN bus scan failed : motors ";
-            if (!m1_ok) { debug_error_message += std::to_string(m1.getId()); debug_error_message += ", "; }
-            if (!m2_ok) { debug_error_message += std::to_string(m2.getId()); debug_error_message += ", "; }
-            if (!m3_ok) { debug_error_message += std::to_string(m3.getId()); debug_error_message += ", "; }
-            if (!m4_ok) { debug_error_message += std::to_string(m4.getId()); debug_error_message += ", "; }
-            debug_error_message += "are not connected";
-            is_can_connection_ok = false;
-            hw_is_busy = false;
-
-            std_msgs::String log_msg;
-            log_msg.data = std::string("gauss_driver ERROR ") + debug_error_message;
-            g_roslogger_pub.publish(log_msg);
-            return CAN_SCAN_TIMEOUT;
-        }
+        //ROS_INFO("CAN Connection ok");
+        hw_is_busy = false;
+        is_can_connection_ok = true;
+        debug_error_message = "";
+        return CAN_SCAN_OK;
+    }else if(2 == protocol_version_ ){
+        is_can_connection_ok = true;
+        return CAN_SCAN_OK;
     }
-
-    //ROS_INFO("CAN Connection ok");
-    hw_is_busy = false;
-    is_can_connection_ok = true;
-    debug_error_message = "";
-    return CAN_SCAN_OK;
 }
-
-

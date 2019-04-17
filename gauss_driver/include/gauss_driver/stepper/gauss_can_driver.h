@@ -5,6 +5,7 @@
 #include <ros/ros.h>
 #include "mcp_can_rpi/mcp_can_rpi.h"
 
+#define CAN_CMD_POS_VEL      0x02
 #define CAN_CMD_POSITION     0x03
 #define CAN_CMD_TORQUE       0x04
 #define CAN_CMD_MODE         0x07
@@ -15,6 +16,11 @@
 #define CAN_CMD_MAX_EFFORT   0x17
 #define CAN_CMD_MOVE_REL     0x18
 #define CAN_CMD_RESET        0x19 // not yet implemented
+#define CAN_CMD_READ         0x52
+#define CAN_CMD_WRITE        0x57
+
+#define CAN_CMD_READ_POS_TEMP    0x0A
+#define CAN_CMD_CONTROL_MODE     0x4D
 
 #define CAN_DATA_POSITION    0x03
 #define CAN_DATA_DIAGNOSTICS 0x08
@@ -33,17 +39,23 @@ class GaussCanDriver
     private:
 
         boost::shared_ptr<MCP_CAN> mcp_can;
+        int protocol_version_;
 
     public:
 
-        GaussCanDriver(int spi_channel, int spi_baudrate, INT8U gpio_can_interrupt);
+        GaussCanDriver(int spi_channel, int spi_baudrate, INT8U gpio_can_interrupt, int protocol_version);
 
         bool setupInterruptGpio();
         bool setupSpi();
         INT8U init();
         bool canReadData();
         INT8U readMsgBuf(INT32U *id, INT8U *len, INT8U *buf);
-         
+
+        //add by itfanr
+        //on 2019-04-16
+        INT8U sendPositionVelocityCommand(int id, int pos_cmd, int vel_cmd);
+        INT8U sendReadPoTempCommand(int id);
+        INT8U sendControlModeCommand(int id, int mode); 
 
         INT8U sendPositionCommand(int id, int cmd);
         INT8U sendRelativeMoveCommand(int id, int steps, int delay);

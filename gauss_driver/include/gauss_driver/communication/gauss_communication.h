@@ -38,7 +38,7 @@ class GaussCommunication : public CommunicationBase {
 
     public:
    
-        GaussCommunication(int hardware_version);
+        GaussCommunication(int hardware_version, int protocol_version);
         int init();
 
         void manageHardwareConnection();
@@ -49,7 +49,9 @@ class GaussCommunication : public CommunicationBase {
         void resumeHardwareControlLoop();
 
         void getCurrentPosition(double pos[6]);
-        
+        void getCurrentPosVel(double pos[6], double vel[6]);
+        void getCurrentPosTemp(double pos[6], double temp[6]);
+            
         void getHardwareStatus(bool *is_connection_ok, std::string &error_message,
                 int *calibration_needed, bool *calibration_in_progress, 
                 std::vector<std::string> &motor_names, std::vector<std::string> &motor_types,
@@ -82,9 +84,14 @@ class GaussCommunication : public CommunicationBase {
         // check hardware version (V1/V2)
         void checkHardwareVersionFromDxlMotors();
 
+        int getCANProtocolVersion();
+
+        void sendPositionVelocityToRobot(const double pos_cmd[6], const double vel_cmd[6]);
+
     private:
 
         int hardware_version;
+        int can_protocol_version_;
 
         boost::shared_ptr<DxlCommunication> dxlComm;
         boost::shared_ptr<CanCommunication> canComm;

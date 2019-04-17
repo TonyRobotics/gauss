@@ -63,7 +63,8 @@ class CanCommunication {
     public:
 
         CanCommunication();
-        int init(int hardware_version);
+        int init(int hardware_version, int protocol_version);
+
         int setupCommunication();
         
         void startHardwareControlLoop(bool limited_mode);
@@ -71,6 +72,8 @@ class CanCommunication {
 
         void setGoalPositionV1(double axis_1_pos_goal, double axis_2_pos_goal, double axis_3_pos_goal, double axis_4_pos_goal);
         void setGoalPositionV2(double axis_1_pos_goal, double axis_2_pos_goal, double axis_3_pos_goal);
+        void setGoalVelocityV1(double axis_1_vel_goal, double axis_2_vel_goal, double axis_3_vel_goal, double axis_4_vel_goal);
+
         void getCurrentPositionV1(double *axis_1_pos, double *axis_2_pos, double *axis_3_pos, double *axis_4_pos); 
         void getCurrentPositionV2(double *axis_1_pos, double *axis_2_pos, double *axis_3_pos); 
 
@@ -105,12 +108,15 @@ class CanCommunication {
         void setCalibrationFlag(bool flag);
 
         void synchronizeSteppers(bool begin_traj);
+        void getCurrentPosVel(double pos[4], double vel[4]);
+        void getCurrentPosTemp(double pos[4], double vel[4]);
 
     private:
         
         // Gauss hardware version
         int hardware_version;
-        
+        int protocol_version_;
+
         int spi_channel;
         int spi_baudrate;
         int gpio_can_interrupt;
@@ -166,10 +172,11 @@ class CanCommunication {
         bool calibration_in_progress;
 
         int relativeMoveMotor(StepperMotorState* motor, int steps, int delay, bool wait);
-
+      
         // conversions steps <-> rad angle
         int32_t rad_pos_to_steps(double position_rad, double gear_ratio, double direction);
         double steps_to_rad_pos(int32_t steps, double gear_ratio, double direction);
+        double vel_rad_to_steps(double vel_rad, double gear_ratio);
 };
 
 #endif

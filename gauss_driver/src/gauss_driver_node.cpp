@@ -51,6 +51,7 @@ class GaussDriver {
     private:
     
     int hardware_version;
+    int can_protocol_version_;
 
     boost::shared_ptr<CommunicationBase> comm;
 
@@ -114,9 +115,15 @@ class GaussDriver {
                 10, &GaussDriver::callbackTrajectoryResult, this);
 
         ros::param::get("/gauss/hardware_version", hardware_version);
-        
+        ros::param::get("/gauss/can_protocol_version", can_protocol_version_);
+
         if (hardware_version != 1 && hardware_version != 2) {
             ROS_ERROR("Incorrect hardware version, should be 1 or 2");
+            return;
+        }
+
+        if (can_protocol_version_ != 1 && can_protocol_version_ != 2) {
+            ROS_ERROR("Incorrect protocol version, should be 1 or 2");
             return;
         }
 
@@ -132,7 +139,8 @@ class GaussDriver {
             comm.reset(new FakeCommunication(hardware_version));
         }
         else {
-            comm.reset(new GaussCommunication(hardware_version));
+            comm.reset(new GaussCommunication(hardware_version, can_protocol_version_));
+
         }
         
         int init_result = comm->init();

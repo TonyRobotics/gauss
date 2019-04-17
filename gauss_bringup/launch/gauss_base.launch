@@ -3,13 +3,15 @@
     <!-- Load the URDF, SRDF and other .yaml configuration files on the param server -->
 
     <arg name="hardware_version" default="1" /> 
+    <arg name="can_protocol_version" default="2" /> 
     <arg name="urdf_without_meshes" default="true" />
     <arg name="gauss_sim_mode" default="false" />
     <arg name="execute_on_gauss_raspberry_pi_image" default="true" /> 
 
     <!-- PARAMS -->
     <group ns="gauss">
-        <param name="hardware_version" type="int" value="$(arg hardware_version)" /> 
+        <param name="hardware_version" type="int" value="$(arg hardware_version)" />
+         <param name="can_protocol_version" type="int" value="$(arg can_protocol_version)" /> 
         <param name="reboot_when_auto_change_version" type="bool" value="true" />
     </group>
 

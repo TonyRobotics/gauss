@@ -17,8 +17,11 @@
 */
 
 #include "gauss_driver/stepper/gauss_can_driver.h"
+#include "gauss_driver/communication/can_communication.h"
 
-GaussCanDriver::GaussCanDriver(int spi_channel, int spi_baudrate, INT8U gpio_can_interrupt) {
+GaussCanDriver::GaussCanDriver(int spi_channel, int spi_baudrate, INT8U gpio_can_interrupt, int protocol_version) 
+    :protocol_version_(protocol_version)
+{
     mcp_can.reset(new MCP_CAN(spi_channel, spi_baudrate, gpio_can_interrupt)); 
 }
 
@@ -57,7 +60,44 @@ INT8U GaussCanDriver::init()
     mcp_can->setMode(MCP_NORMAL);
     
     ros::Duration(0.05).sleep();
+
+    if(1 == protocol_version_){
+        ROS_INFO("set protocol_version: %d", protocol_version_);
+        sendControlModeCommand(CAN_BROADCAST_ID, protocol_version_);
+    }else if(2 == protocol_version_){
+        ROS_INFO("set protocol_version: %d", protocol_version_);
+        sendControlModeCommand(CAN_BROADCAST_ID, protocol_version_);        
+    }
     return result;
+}
+
+//add vel command
+// 2019-04-11
+INT8U GaussCanDriver::sendPositionVelocityCommand(int id, int pos_cmd, int vel_cmd)
+{
+    if(vel_cmd <=0){
+        vel_cmd = 0xFFFFFFFF;
+    }
+    uint8_t data[8] = { CAN_CMD_POS_VEL , 
+        (uint8_t) ((pos_cmd >> 16) & 0xFF), (uint8_t) ((pos_cmd >> 8) & 0xFF), (uint8_t) (pos_cmd & 0XFF), //3 bytes
+        (uint8_t) ((vel_cmd >> 24) & 0xFF), (uint8_t) ((vel_cmd >> 16) & 0xFF),
+        (uint8_t) ((vel_cmd >> 8) & 0xFF), (uint8_t) (vel_cmd & 0XFF) };//4bytes
+    return mcp_can->sendMsgBuf(id, 0, 8, data);
+}
+
+INT8U GaussCanDriver::sendReadPoTempCommand(int id)
+{
+    uint8_t data[2] = { CAN_CMD_READ, 
+                    (uint8_t)(CAN_CMD_READ_POS_TEMP & 0xFF) };
+    return mcp_can->sendMsgBuf(id, 0, 2, data);
+}
+
+INT8U GaussCanDriver::sendControlModeCommand(int id, int mode)
+{
+    uint8_t data[3] = { CAN_CMD_WRITE, 
+            (uint8_t)(CAN_CMD_CONTROL_MODE & 0xFF),
+            (uint8_t)(mode & 0xFF) };
+    return mcp_can->sendMsgBuf(id, 0, 3, data);
 }
 
 bool GaussCanDriver::canReadData()

@@ -68,6 +68,11 @@ class CommunicationBase {
         // steppers
         virtual void synchronizeMotors(bool begin_traj) = 0;
 
+        virtual int relativeMoveMotor(int motor_id, float rad_value){};
+        virtual int getCANProtocolVersion() {};
+        virtual void getCurrentPosVel(double pos[6], double vel[6]){};
+        virtual void getCurrentPosTemp(double pos[6], double temp[6]){};
+        virtual void sendPositionVelocityToRobot(const double pos[6], const double vel[6]){};
 };
 
 #endif
