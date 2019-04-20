@@ -146,8 +146,9 @@ class CanCommunication {
         void hardwareControlWrite();
         void hardwareControlCheckConnection();
         void resetHardwareControlLoopRates();
+        void dataControlLoop();
 
-        boost::shared_ptr<std::thread> hardware_control_loop_thread;
+        boost::shared_ptr<std::thread> hardware_control_loop_thread; 
 
         StepperMotorState m1;
         StepperMotorState m2;
@@ -176,7 +177,7 @@ class CanCommunication {
         // conversions steps <-> rad angle
         int32_t rad_pos_to_steps(double position_rad, double gear_ratio, double direction);
         double steps_to_rad_pos(int32_t steps, double gear_ratio, double direction);
-        double vel_rad_to_steps(double vel_rad, double gear_ratio);
+        int vel_rad_to_steps(double vel_rad, double gear_ratio);
 };
 
 #endif

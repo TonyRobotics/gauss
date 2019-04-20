@@ -46,6 +46,17 @@ bool g_debug_mode = false;
 
 GaussLogger g_roslogger_pub;
 
+static void timespecInc(struct timespec &tick, int nsec)
+{
+  int SEC_2_NSEC = 1e+9;
+  tick.tv_nsec += nsec;
+  while (tick.tv_nsec >= SEC_2_NSEC)
+  {
+    tick.tv_nsec -= SEC_2_NSEC;
+    ++tick.tv_sec;
+  }
+}
+
 class GaussDriver {
 
     private:
@@ -78,31 +89,82 @@ class GaussDriver {
 
     public:
 
+    // void rosControlLoop() 
+    // {
+    //     ros::Time last_time = ros::Time::now();
+    //     ros::Time current_time = ros::Time::now();
+    //     ros::Duration elapsed_time;
+        
+    //     while(ros::ok()) {
+        
+    //       robot->read();
+    //       current_time = ros::Time::now();
+    //       elapsed_time = ros::Duration(current_time - last_time);
+    //       last_time = current_time;        
+
+    //       if (flag_reset_controllers) {
+    //         robot->setCommandToCurrentPosition();
+    //         cm->update(ros::Time::now(), elapsed_time, true);
+    //         flag_reset_controllers = false;
+    //       }
+    //       else {
+    //         cm->update(ros::Time::now(), elapsed_time, false);
+    //       }
+    
+    //       robot->write();
+         
+    //       ros_control_loop_rate->sleep();
+    //     }
+    // }
+
     void rosControlLoop() 
     {
+        double data_control_loop_frequency;
+        ros::param::get("~data_control_loop_frequency", data_control_loop_frequency);
+        double dur = (double)(1/data_control_loop_frequency);
+        
+        ros::Duration d(dur);
+        struct timespec tick;
+        clock_gettime(CLOCK_REALTIME, &tick);
+        //time for checking overrun
+        struct timespec before;
+        double overrun_time;
+        
         ros::Time last_time = ros::Time::now();
         ros::Time current_time = ros::Time::now();
         ros::Duration elapsed_time;
         
         while(ros::ok()) {
-        
-          robot->read();
-          current_time = ros::Time::now();
-          elapsed_time = ros::Duration(current_time - last_time);
-          last_time = current_time;        
+            ros::Time this_moment(tick.tv_sec, tick.tv_nsec);
+            
+            robot->read(); 
 
-          if (flag_reset_controllers) {
-            robot->setCommandToCurrentPosition();
-            cm->update(ros::Time::now(), elapsed_time, true);
-            flag_reset_controllers = false;
-          }
-          else {
-            cm->update(ros::Time::now(), elapsed_time, false);
-          }
-    
-          robot->write();
-         
-          ros_control_loop_rate->sleep();
+            if (flag_reset_controllers) {
+                current_time = ros::Time::now();
+                elapsed_time = ros::Duration(current_time - last_time);
+                last_time = current_time; 
+                robot->setCommandToCurrentPosition();
+                cm->update(ros::Time::now(), elapsed_time, true);
+                flag_reset_controllers = false;
+            }
+            else {
+                cm->update(this_moment, d);
+            }
+
+            robot->write();
+
+            // ros_control_loop_rate->sleep();
+            timespecInc(tick, d.nsec);
+            // check overrun
+            clock_gettime(CLOCK_REALTIME, &before);
+            overrun_time = (before.tv_sec + double(before.tv_nsec)/1e+9) -  (tick.tv_sec + double(tick.tv_nsec)/1e+9);
+            if(overrun_time > 0.0)
+            {
+                tick.tv_sec=before.tv_sec;
+                tick.tv_nsec=before.tv_nsec;
+            }
+
+            clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &tick, NULL);
         }
     }
 

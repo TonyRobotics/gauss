@@ -30,23 +30,21 @@ double CanCommunication::steps_to_rad_pos(int32_t steps, double gear_ratio, doub
     return (double) ((double)steps * 360.0 / (200.0 * 8.0 * gear_ratio * RADIAN_TO_DEGREE)) * direction ;
 }
 
-double CanCommunication::vel_rad_to_steps(double vel_rad, double gear_ratio)
+int CanCommunication::vel_rad_to_steps(double vel_rad, double gear_ratio)
 {
     // std::cout<<"~~~~~~~~~~~~~~~"<<std::endl;
     // std::cout<<"vel_rad "<<vel_rad<<std::endl;
     // std::cout<<"gear_ratio "<<gear_ratio<<std::endl; 
     // double steps_per_second = (double)(RADIAN_TO_DEGREE * gear_ratio /1.8* 8) * abs(vel_rad);
-    double steps_per_second;
-    double one_rad_vel = (double)(RADIAN_TO_DEGREE * gear_ratio /1.8* 8);
-    // std::cout<<"one_rad_vel "<<one_rad_vel<<std::endl;
-    double vel_rad_tmp = (vel_rad >=0) ? vel_rad : (-1 * vel_rad);
-    steps_per_second = one_rad_vel * vel_rad_tmp;
-    // std::cout<<"steps_per_second "<<steps_per_second<<std::endl; 
 
-    if(0 == steps_per_second) {
+    if(fabs(vel_rad) < 1e-4){
         return -1;
     }
-    return ((double)(1/steps_per_second)) * 1000000;
+    double steps_per_second = RADIAN_TO_DEGREE * gear_ratio /1.8 * 8 * fabs(vel_rad);
+    int value = (int)((1/steps_per_second) * 1000000);
+    if(value >= 1000000)
+        value = -1;
+    return value;
 }
 
 CanCommunication::CanCommunication()
@@ -196,7 +194,6 @@ int CanCommunication::init(int hardware_version, int protocol_version)
     steppers_calibration_mode = CAN_STEPPERS_CALIBRATION_MODE_AUTO; // default
     write_synchronize_begin_traj = true;
     calibration_in_progress = false;
-
     return setupCommunication();
 }
 
@@ -588,7 +585,7 @@ void CanCommunication::hardwareControlWrite()
                             //ROS_ERROR("Failed to send position");
                         }
                     }else if(2 == protocol_version_) {
-                        // printf("send Command pos %d vel %d\n", motors.at(i)->getPositionCommand(), motors.at(i)->getVelocityCommand());
+                        //printf("send Command pos %d vel %d\n", motors.at(i)->getPositionCommand(), motors.at(i)->getVelocityCommand());
 
                         if (can->sendPositionVelocityCommand(motors.at(i)->getId(), 
                                 motors.at(i)->getPositionCommand(), motors.at(i)->getVelocityCommand()) != CAN_OK) {

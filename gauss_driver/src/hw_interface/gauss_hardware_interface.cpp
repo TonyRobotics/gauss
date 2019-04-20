@@ -52,6 +52,31 @@ GaussHardwareInterface::GaussHardwareInterface(CommunicationBase* gauss_comm)
     pos_vel_joint_interface.registerHandle(position_handle6);
 
     registerInterface(&pos_vel_joint_interface);
+    
+    ros::param::get("~data_control_loop_frequency", data_control_loop_frequency_);
+
+    int can_protocol_version = -1;
+    ros::param::get("/gauss/can_protocol_version", can_protocol_version);
+    if(2 == can_protocol_version){
+
+       pos_cmd_queues_.push_back(&joint1_pos_cmd_queue_);
+       pos_cmd_queues_.push_back(&joint2_pos_cmd_queue_);
+       pos_cmd_queues_.push_back(&joint3_pos_cmd_queue_);
+       pos_cmd_queues_.push_back(&joint4_pos_cmd_queue_);
+       pos_cmd_queues_.push_back(&joint5_pos_cmd_queue_);
+       pos_cmd_queues_.push_back(&joint6_pos_cmd_queue_);
+
+       vel_cmd_queues_.push_back(&joint1_vel_cmd_queue_);
+       vel_cmd_queues_.push_back(&joint2_vel_cmd_queue_);
+       vel_cmd_queues_.push_back(&joint3_vel_cmd_queue_);
+       vel_cmd_queues_.push_back(&joint4_vel_cmd_queue_);
+       vel_cmd_queues_.push_back(&joint5_vel_cmd_queue_);
+       vel_cmd_queues_.push_back(&joint6_vel_cmd_queue_);
+
+        ROS_INFO("vel_cmd_queues_ init.");
+
+        data_control_loop_thread.reset(new std::thread(boost::bind(&GaussHardwareInterface::dataControlLoop, this)));
+    }
 
     ROS_INFO("Interfaces registered.");
 }
@@ -65,6 +90,52 @@ GaussHardwareInterface::GaussHardwareInterface(CommunicationBase* gauss_comm)
 //     joint_position_interface.getHandle("joint5").setCommand(pos[4]);
 //     joint_position_interface.getHandle("joint6").setCommand(pos[5]);
 // }
+
+void GaussHardwareInterface::dataControlLoop()
+{
+    ROS_INFO("thread dataControlLoop");
+
+    ros::Rate data_control_loop_frequency_rate = ros::Rate(data_control_loop_frequency_); 
+
+    while (ros::ok()) {
+        data_mutex_.lock();
+
+       double pos_cmd[6];
+       double vel_cmd[6];
+       for(size_t i = 0; i < 6; i++)
+        {
+            if(!pos_cmd_queues_.at(i)->size())
+                continue;
+
+            double cmd = pos_cmd_queues_.at(i)->front();
+            //printf("--------pos queue size %d, cmd %f\n",pos_cmd_queues_.at(i)->size(), cmd);
+            pos_cmd[i] = cmd;
+            pos_cmd_queues_.at(i)->pop();
+        }  
+       
+       for(size_t i = 0; i < 6; i++)
+        {
+            if(!vel_cmd_queues_.at(i)->size())
+                continue;
+
+            double cmd = vel_cmd_queues_.at(i)->front();
+            //printf("--------vel queue size %d, cmd %f\n",vel_cmd_queues_.at(i)->size(), cmd);
+            vel_cmd[i] = cmd;
+            vel_cmd_queues_.at(i)->pop();
+        }  
+
+        data_mutex_.unlock();
+
+        comm->sendPositionVelocityToRobot(pos_cmd, vel_cmd);  
+        // for(size_t i = 0; i < 6; i++)
+        // {
+            // printf("--------%d pos_cmd %f", i, pos_cmd[i]);
+            // printf(" vel_cmd %f\n", vel_cmd[i]);
+        // }        
+
+        data_control_loop_frequency_rate.sleep();      
+    }
+}
 
 void GaussHardwareInterface::setCommandToCurrentPosition()
 {
@@ -123,8 +194,29 @@ void GaussHardwareInterface::write()
      if(1 == comm->getCANProtocolVersion()){
         comm->sendPositionToRobot(pos_cmd);
     }else if(2 == comm->getCANProtocolVersion()){
-        comm->sendPositionVelocityToRobot(pos_cmd, vel_cmd);  
+        // comm->sendPositionVelocityToRobot(pos_cmd, vel_cmd);  
         // std::cout<<"sendPositionVelocityToRobot write -- : "<< vel_cmd[2]<<std::endl;
-        // std::cout<<"write -- pos_cmd: "<<pos_cmd[2]<< " vel_cmd: "<< vel_cmd[2]<<std::endl;
+        // for(size_t i = 0; i < 6; i++)
+        // {
+            // std::cout<<"GaussHardwareInterface -- got i: "<< i <<std::endl;
+            // std::cout<<"GaussHardwareInterface -- got pos_cmd: " <<pos_cmd[i]<< " vel_cmd: "<< vel_cmd[i]<<std::endl;
+        // }
+        
+        data_mutex_.lock();
+
+        for(size_t i = 0; i < 6; i++)
+        {
+            if( pos_cmd_queues_.at(i)->size() !=0 && vel_cmd_queues_.at(i)->size() !=0){
+                if(fabs(vel_cmd_queues_.at(i)->back()) <= 1e-8){
+                    if( fabs(pos_cmd[i] - pos_cmd_queues_.at(i)->back()) <= 1e-8  &&  fabs(vel_cmd[i]) <= 1e-8 ){
+                        continue;
+                    }
+                }
+            } 
+            pos_cmd_queues_.at(i)->push(pos_cmd[i]);       
+            vel_cmd_queues_.at(i)->push(vel_cmd[i]);
+        }  
+        data_mutex_.unlock();
     }
 }
+

@@ -26,6 +26,9 @@
 #include <hardware_interface/robot_hw.h>
 #include <ros/ros.h>
 #include <vector>
+#include <mutex>
+#include <queue>
+#include <thread>
 
 #include "gauss_driver/communication/communication_base.h"
 #include "common/common.h"
@@ -43,7 +46,6 @@ class GaussHardwareInterface: public hardware_interface::RobotHW {
         void read();
 
         void write();
-
         // custom
         void setCommandToCurrentPosition();
 
@@ -58,7 +60,28 @@ class GaussHardwareInterface: public hardware_interface::RobotHW {
         hardware_interface::JointStateInterface joint_state_interface;
         // hardware_interface::PositionJointInterface joint_position_interface;
         hardware_interface::PosVelJointInterface pos_vel_joint_interface;
+        boost::shared_ptr<std::thread> data_control_loop_thread; 
 
+        double data_control_loop_frequency_;
+        void dataControlLoop();
+        
+        std::mutex data_mutex_;
+        std::queue<double> joint1_pos_cmd_queue_;   
+        std::queue<double> joint1_vel_cmd_queue_;
+        std::queue<double> joint2_pos_cmd_queue_;   
+        std::queue<double> joint2_vel_cmd_queue_;  
+        std::queue<double> joint3_pos_cmd_queue_;   
+        std::queue<double> joint3_vel_cmd_queue_;  
+        std::queue<double> joint4_pos_cmd_queue_;   
+        std::queue<double> joint4_vel_cmd_queue_;  
+        std::queue<double> joint5_pos_cmd_queue_;   
+        std::queue<double> joint5_vel_cmd_queue_; 
+        std::queue<double> joint6_pos_cmd_queue_;   
+        std::queue<double> joint6_vel_cmd_queue_; 
+
+        std::vector< std::queue<double> *>  pos_cmd_queues_;
+        std::vector< std::queue<double> *>  vel_cmd_queues_;
+        
         double pos_cmd[6] = { 0, 0.64, -1.39, 0, 0, 0};
         double vel_cmd[6] = { 0, 0, 0, 0, 0, 0};
 
