@@ -106,6 +106,8 @@ class CanCommunication {
 
         void synchronizeSteppers(bool begin_traj);
 
+        bool has_data_flag = false;
+
     private:
         
         // Gauss hardware version

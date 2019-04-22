@@ -453,7 +453,7 @@ void GaussCommunication::getCurrentPosition(double pos[6])
     }
 }
 
-void GaussCommunication::sendPositionToRobot(const double cmd[6])
+bool GaussCommunication::sendPositionToRobot(const double cmd[6])
 {
     bool is_calibration_in_progress = false;
     if (can_enabled) {
@@ -463,8 +463,16 @@ void GaussCommunication::sendPositionToRobot(const double cmd[6])
     // don't send position command when calibrating motors
     if (!is_calibration_in_progress) {
         if (hardware_version == 1) {
-            if (can_enabled) { canComm->setGoalPositionV1(cmd[0], cmd[1], cmd[2], cmd[3]); }
-            if (dxl_enabled) { dxlComm->setGoalPositionV1(cmd[4], cmd[5]); }
+            if(!canComm->has_data_flag){ // if do not have data. send it
+                // std::cout<<"---------- canComm->has_data_flag is false"<<std::endl;
+                if (can_enabled) { canComm->setGoalPositionV1(cmd[0], cmd[1], cmd[2], cmd[3]); }
+                if (dxl_enabled) { dxlComm->setGoalPositionV1(cmd[4], cmd[5]); }
+                canComm->has_data_flag = true;
+                return true;
+            }else{
+                // std::cout<<"---------- canComm->has_data_flag is true"<<std::endl;
+                return false;
+            }
 
             // if disabled (debug purposes)
             if (!can_enabled) {
@@ -478,6 +486,7 @@ void GaussCommunication::sendPositionToRobot(const double cmd[6])
                 pos_dxl_disabled_v1[0] = cmd[4];
                 pos_dxl_disabled_v1[1] = cmd[5];
             }
+            return true;
         }
         else if (hardware_version == 2) {
             if (can_enabled) { canComm->setGoalPositionV2(cmd[0], cmd[1], cmd[2]); }
@@ -497,6 +506,7 @@ void GaussCommunication::sendPositionToRobot(const double cmd[6])
             }
         }
     }
+    return false;
 }
 
 void GaussCommunication::activateLearningMode(bool activate) 
