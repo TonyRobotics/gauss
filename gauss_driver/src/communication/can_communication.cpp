@@ -765,7 +765,7 @@ int CanCommunication::relativeMoveMotor(StepperMotorState* motor, int steps, int
 
 int CanCommunication::autoCalibrationStep1()
 {
-    int calibration_timeout = 20; // seconds
+    int calibration_timeout = 35; // seconds
     int result;
 
     // 0. Torque ON for motor 2
@@ -783,7 +783,7 @@ int CanCommunication::autoCalibrationStep1()
 
 int CanCommunication::autoCalibrationStep2()
 {
-    int calibration_timeout = 20; // seconds
+    int calibration_timeout = 35; // seconds
     int result;
 
     // 2. Send calibration cmd 1 + 2 + 4 (+3 if hw version == 2)
