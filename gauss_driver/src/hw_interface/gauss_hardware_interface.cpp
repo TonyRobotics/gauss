@@ -56,6 +56,17 @@ GaussHardwareInterface::GaussHardwareInterface(CommunicationBase* gauss_comm)
     registerInterface(&joint_position_interface);
 
     ROS_INFO("Interfaces registered.");
+
+    pos_cmd_queues_.push_back(&joint1_pos_cmd_queue_);
+    pos_cmd_queues_.push_back(&joint2_pos_cmd_queue_);
+    pos_cmd_queues_.push_back(&joint3_pos_cmd_queue_);
+    pos_cmd_queues_.push_back(&joint4_pos_cmd_queue_);
+    pos_cmd_queues_.push_back(&joint5_pos_cmd_queue_);
+    pos_cmd_queues_.push_back(&joint6_pos_cmd_queue_);
+
+    ros::param::get("~data_control_loop_frequency", data_control_loop_frequency_);
+    data_control_loop_thread.reset(new std::thread(boost::bind(&GaussHardwareInterface::dataControlLoop, this)));
+
 }
 
 void GaussHardwareInterface::setCommandToCurrentPosition()
@@ -104,5 +115,60 @@ void GaussHardwareInterface::write()
     //pos[4] = cmd[4];
     //pos[5] = cmd[5];
 
-    comm->sendPositionToRobot(cmd);
+    // comm->sendPositionToRobot(cmd);
+    data_mutex_.lock();
+    for(size_t i = 0; i < 6; i++)
+    {
+        if( pos_cmd_queues_.at(i)->size() !=0 ){         
+            if(fabs(cmd[i] - pos_cmd_queues_.at(i)->back()) <= 1e-8){
+                continue;
+            }
+        }
+        pos_cmd_queues_.at(i)->push(cmd[i]);
+    }
+    data_mutex_.unlock();
+}
+
+
+void GaussHardwareInterface::dataControlLoop()
+{
+    ROS_INFO("thread dataControlLoop");
+
+    ros::Rate data_control_loop_frequency_rate = ros::Rate(data_control_loop_frequency_); 
+
+    while (ros::ok()) {
+       data_mutex_.lock();
+
+       double pos_cmd_tmp[6];
+       bool got_data_flag = false;
+
+       for(size_t i = 0; i < 6; i++)
+        {
+            if(!pos_cmd_queues_.at(i)->size()){
+                continue;
+            }else{
+                got_data_flag = true;
+            }
+
+            double cmd = pos_cmd_queues_.at(i)->front();
+            // printf("--------pos queue size %d, cmd %f\n",pos_cmd_queues_.at(i)->size(), cmd);
+            pos_cmd_tmp[i] = cmd;
+        } 
+
+        if(got_data_flag){
+            if(comm->sendPositionToRobot(pos_cmd_tmp)){ //send success
+                for(size_t i = 0; i < 6; i++)
+                {
+                    pos_cmd_queues_.at(i)->pop();                
+                }
+                // std::cout<<"---------- send success"<<std::endl;
+            }else{
+                // std::cout<<"---------- wait to send"<<std::endl;
+            }
+        }
+
+        data_mutex_.unlock();
+        
+        data_control_loop_frequency_rate.sleep();      
+    }
 }

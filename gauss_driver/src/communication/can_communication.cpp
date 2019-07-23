@@ -403,13 +403,16 @@ void CanCommunication::hardwareControlWrite()
         if (write_position_enable) {
             
             for (int i = 0 ; i < motors.size(); i++) {
-                if (motors.at(i)->isEnabled()) {
+                if (motors.at(i)->isEnabled() && has_data_flag) {
+                    // ROS_INFO("sendPositionCommand i %d pos %d", i, motors.at(i)->getPositionCommand());
+
                     if (can->sendPositionCommand(motors.at(i)->getId(), motors.at(i)->getPositionCommand()) != CAN_OK) {
-                        //ROS_ERROR("Failed to send position");
+                        ROS_ERROR("Failed to send position");
                     }
                 }
             }
         }
+        has_data_flag = false;
        
         // write micro steps
         if (write_micro_steps_enable) {

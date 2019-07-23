@@ -59,7 +59,7 @@ class GaussCommunication : public CommunicationBase {
         void getFirmwareVersions(std::vector<std::string> &motor_names,
                 std::vector<std::string> &firmware_versions);
         
-        void sendPositionToRobot(const double cmd[6]); 
+        bool sendPositionToRobot(const double cmd[6]); 
         void activateLearningMode(bool activate);
         bool setLeds(std::vector<int> &leds, std::string &message);
         

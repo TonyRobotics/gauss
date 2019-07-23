@@ -101,11 +101,12 @@ bool FakeCommunication::isCalibrationInProgress()
     return false;
 }
 
-void FakeCommunication::sendPositionToRobot(const double cmd[6])
+bool FakeCommunication::sendPositionToRobot(const double cmd[6])
 {
     for (int i = 0 ; i < 6 ; i++) {
         echo_pos[i] = cmd[i]; 
     }
+    return true;
 }
 
 void FakeCommunication::getCurrentPosition(double pos[6])
